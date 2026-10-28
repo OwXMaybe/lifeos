@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LifeOS — Kişisel Yaşam İşletim Sistemi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F7F9; --card:#FFFFFF; --panel:#F1F3F5; --accent:#5B8DEF; --accent2:#9B7DEF;
+  --accent-soft:rgba(91,141,239,.10); --success:#4CAF50; --warn:#FFB547; --danger:#FF5D73;
+  --text:#1C1C1E; --sub:#6E6E73; --border:#E7E7E8; --ring:#ECEEF1;
+  --shadow:0 6px 22px rgba(17,19,21,.06); --shadow-h:0 18px 44px rgba(17,19,21,.12);
+  --glow:inset 0 1px 0 rgba(255,255,255,.6);
+}
+[data-theme="dark"]{
+  --bg:#111315; --card:#181A1D; --panel:#1E2125; --accent-soft:rgba(91,141,239,.16);
+  --text:#FFFFFF; --sub:#9A9AA1; --border:#26292E; --ring:#26292E;
+  --shadow:0 10px 30px rgba(0,0,0,.45); --shadow-h:0 20px 50px rgba(0,0,0,.6);
+  --glow:inset 0 1px 0 rgba(255,255,255,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  transition:background .4s ease,color .4s ease;-webkit-font-smoothing:antialiased}
+.disp{font-family:'Poppins','Inter',sans-serif;letter-spacing:-.02em}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:20px}
+::-webkit-scrollbar-track{background:transparent}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;outline:none}
+a{color:inherit;text-decoration:none}
+.btn{padding:11px 20px;border-radius:13px;font-size:14px;font-weight:600;transition:box-shadow .3s,transform .15s,filter .2s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{box-shadow:0 0 0 4px var(--accent-soft),0 10px 24px rgba(91,141,239,.35);filter:brightness(1.04)}
+.btn-primary:active{transform:scale(.97)}
+.btn-ghost{background:var(--panel);color:var(--sub);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow),var(--glow);padding:22px;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s}
+.card.lift:hover{transform:translateY(-4px);box-shadow:var(--shadow-h)}
+input.field,textarea.field{width:100%;padding:12px 14px;border-radius:13px;border:1px solid var(--border);background:var(--panel);
+  color:var(--text);font-size:14px;transition:border .2s,box-shadow .2s}
+input.field:focus,textarea.field:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.fadein{animation:fadein .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.stagger>*{animation:fadein .5s cubic-bezier(.2,.8,.2,1) both}
+.stagger>*:nth-child(1){animation-delay:.03s}.stagger>*:nth-child(2){animation-delay:.08s}
+.stagger>*:nth-child(3){animation-delay:.13s}.stagger>*:nth-child(4){animation-delay:.18s}
+.stagger>*:nth-child(5){animation-delay:.23s}.stagger>*:nth-child(6){animation-delay:.28s}
+.bar-fill{transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.ring-fg{transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1)}
+.pulse{animation:pulse 2s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.confetti{position:fixed;width:9px;height:14px;top:-20px;z-index:9999;border-radius:2px;pointer-events:none}
+@keyframes confall{to{transform:translateY(105vh) rotate(720deg);opacity:0}}
+
+/* ---- Auth / landing ---- */
+.auth-wrap{min-height:100vh;display:grid;grid-template-columns:1.1fr 1fr}
+.auth-hero{position:relative;overflow:hidden;padding:56px;display:flex;flex-direction:column;justify-content:space-between;
+  background:linear-gradient(150deg,var(--accent),var(--accent2))}
+.auth-hero .blob{position:absolute;border-radius:50%;filter:blur(10px);opacity:.35}
+.auth-panel{display:flex;align-items:center;justify-content:center;padding:40px 32px}
+.auth-box{width:100%;max-width:380px}
+.auth-tabs{display:flex;gap:6px;background:var(--panel);padding:5px;border-radius:14px;margin-bottom:24px}
+.auth-tabs button{flex:1;padding:10px;border-radius:10px;font-size:14px;font-weight:600;color:var(--sub);transition:.2s}
+.auth-tabs button.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+.err{color:var(--danger);font-size:12.5px;min-height:16px;margin-top:6px}
+.chip{font-size:12px;padding:4px 10px;border-radius:9px;background:var(--panel);color:var(--sub);display:inline-flex;align-items:center;gap:5px}
+
+/* ---- App shell ---- */
+.shell{display:flex;min-height:100vh}
+.side{width:240px;flex-shrink:0;position:sticky;top:0;height:100vh;background:var(--card);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:20px 14px;transition:width .35s}
+.side .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 20px}
+.logo{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px;flex-shrink:0}
+.nav{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.navitem{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:13px;width:100%;text-align:left;
+  font-size:13.5px;font-weight:500;color:var(--sub);transition:.2s}
+.navitem:hover{transform:translateX(2px);color:var(--text)}
+.navitem.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.navitem .lk{margin-left:auto;font-size:10px;font-weight:700;color:var(--warn);background:rgba(255,181,71,.15);padding:2px 6px;border-radius:6px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:40;padding:14px 26px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);
+  background:var(--card)}
+.search{position:relative;flex:1;max-width:420px}
+.search input{width:100%;padding:11px 14px 11px 40px;border-radius:13px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:13.5px}
+.icon-btn{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--panel);display:flex;align-items:center;justify-content:center;color:var(--text)}
+.content{flex:1;padding:26px 26px 80px;max-width:1240px;width:100%;margin:0 auto}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.sec-h{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px}
+.sec-h h3{font-size:19px;font-weight:700}.sec-h p{font-size:13px;color:var(--sub);margin-top:3px}
+.stat-ic{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.row{display:flex;align-items:center;gap:12px}
+.list-item{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:14px;border:1px solid var(--border);background:var(--panel);transition:.25s;width:100%;text-align:left}
+.check{width:22px;height:22px;border-radius:8px;flex-shrink:0;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;transition:.25s}
+.check.round{border-radius:50%}
+.tag{font-size:12px;padding:4px 10px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-weight:500}
+.pro-badge{font-size:11px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--warn),var(--danger));padding:3px 9px;border-radius:8px}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:12px 20px;
+  border-radius:14px;font-size:13.5px;font-weight:600;z-index:9998;box-shadow:var(--shadow-h);animation:fadein .3s}
+.fab{position:fixed;right:26px;bottom:26px;z-index:60;width:60px;height:60px;border-radius:20px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;
+  box-shadow:0 12px 30px rgba(91,141,239,.45)}
+.mono{font-variant-numeric:tabular-nums}
+.lock-wrap{min-height:56vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center}
+
+@media(max-width:920px){.g2,.g3{grid-template-columns:1fr}.auth-wrap{grid-template-columns:1fr}.auth-hero{display:none}}
+@media(max-width:720px){.side{width:66px}.side .brand span,.navitem span,.navitem .lk{display:none}.navitem{justify-content:center}.content{padding:18px 14px 90px}.topbar{padding:12px 14px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+[contenteditable]:empty:before{content:attr(data-ph);color:var(--sub)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   LifeOS — standalone app (no external JS libraries)
+   Data persists in the browser (localStorage) and gracefully
+   falls back to in-memory storage if storage is unavailable.
+   ============================================================ */
+
+/* ---------- Safe storage layer (never throws) ---------- */
+const Store=(()=>{
+  let mem={},ok=false;
+  try{const k="__los_test__";localStorage.setItem(k,"1");localStorage.removeItem(k);ok=true;}catch(e){ok=false;}
+  return {
+    persistent:ok,
+    get(k){try{return ok?localStorage.getItem(k):(k in mem?mem[k]:null);}catch(e){return (k in mem)?mem[k]:null;}},
+    set(k,v){try{if(ok)localStorage.setItem(k,v);else mem[k]=v;}catch(e){mem[k]=v;}},
+    del(k){try{if(ok)localStorage.removeItem(k);else delete mem[k];}catch(e){delete mem[k];}}
+  };
+})();
+
+/* ---------- Helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const todayKey=()=>new Date().toISOString().slice(0,10);
+const hash=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h)+s.charCodeAt(i);return (h>>>0).toString(16);};
+function jload(k,def){try{const v=Store.get(k);return v?JSON.parse(v):def;}catch(e){return def;}}
+function jsave(k,v){try{Store.set(k,JSON.stringify(v));}catch(e){}}
+
+const USERS_KEY="lifeos_users";
+const SESSION_KEY="lifeos_session";
+const dataKey=email=>"lifeos_data_"+email;
+
+const loadUsers=()=>jload(USERS_KEY,{});
+const saveUsers=u=>jsave(USERS_KEY,u);
+
+function newData(){
+  return {
+    theme:"light", xp:0, coins:0, streak:{count:0,last:null},
+    water:{date:todayKey(),count:0},
+    habits:[
+      {id:uid(),name:"Meditasyon",color:"#5B8DEF",history:{}},
+      {id:uid(),name:"20 sayfa oku",color:"#4CAF50",history:{}},
+      {id:uid(),name:"Su iç",color:"#FFB547",history:{}}
+    ],
+    tasks:[
+      {id:uid(),text:"Günlük planı hazırla",done:false},
+      {id:uid(),text:"E-postaları yanıtla",done:false}
+    ],
+    journal:[]
+  };
+}
+
+/* ---------- App state ---------- */
+const S={view:"dashboard",user:null,data:null,authTab:"login",pomo:{sec:25*60,run:false,id:null},coach:[]};
+
+/* ---------- Session / data plumbing ---------- */
+function saveData(){ if(S.user) jsave(dataKey(S.user.email),S.data); }
+function applyTheme(){ document.documentElement.setAttribute("data-theme", S.data?S.data.theme:"light"); }
+
+function updateStreak(){
+  const t=todayKey(); const st=S.data.streak;
+  if(st.last===t) return;
+  const y=new Date(Date.now()-864e5).toISOString().slice(0,10);
+  st.count = st.last===y ? st.count+1 : 1;
+  st.last=t; saveData();
+}
+function resetWaterIfNewDay(){
+  if(S.data.water.date!==todayKey()){ S.data.water={date:todayKey(),count:0}; saveData(); }
+}
+function levelInfo(){
+  const xp=S.data.xp, lvl=Math.floor(xp/500)+1, inLvl=xp%500;
+  return {lvl,inLvl,need:500,pct:Math.round(inLvl/500*100)};
+}
+function award(xp,coins){
+  const before=levelInfo().lvl;
+  S.data.xp+=xp; S.data.coins+=(coins||0); saveData();
+  if(levelInfo().lvl>before){ fireConfetti(); toast("🎉 Seviye atladın — Seviye "+levelInfo().lvl); }
+}
+
+/* ---------- Auth actions ---------- */
+function doSignup(){
+  const name=$("#suName").value.trim(), email=$("#suEmail").value.trim().toLowerCase(), pass=$("#suPass").value;
+  const e=$("#authErr");
+  if(name.length<2){e.textContent="Lütfen adını gir (en az 2 harf).";return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){e.textContent="Geçerli bir e-posta gir.";return;}
+  if(pass.length<6){e.textContent="Şifre en az 6 karakter olmalı.";return;}
+  const users=loadUsers();
+  if(users[email]){e.textContent="Bu e-posta zaten kayıtlı. Giriş yap.";return;}
+  users[email]={name,email,pass:hash(pass),premium:false,created:Date.now()};
+  saveUsers(users);
+  jsave(dataKey(email),newData());
+  startSession(email);
+  toast("Hesabın oluşturuldu, hoş geldin "+name+"!");
+}
+function doLogin(){
+  const email=$("#liEmail").value.trim().toLowerCase(), pass=$("#liPass").value;
+  const e=$("#authErr");
+  const users=loadUsers(), u=users[email];
+  if(!u || u.pass!==hash(pass)){e.textContent="E-posta veya şifre hatalı.";return;}
+  startSession(email);
+  toast("Tekrar hoş geldin, "+u.name+"!");
+}
+function startSession(email){
+  Store.set(SESSION_KEY,email);
+  const users=loadUsers();
+  S.user=users[email];
+  S.data=jload(dataKey(email),newData());
+  applyTheme(); resetWaterIfNewDay(); updateStreak();
+  S.view="dashboard"; render();
+}
+function logout(){ Store.del(SESSION_KEY); S.user=null; S.data=null; document.documentElement.setAttribute("data-theme","light"); render(); }
+
+function upgrade(){
+  const users=loadUsers();
+  users[S.user.email].premium=true; saveUsers(users); S.user.premium=true;
+  fireConfetti(); toast("✨ Premium etkin! Tüm özellikler açıldı."); render();
+}
+
+/* ---------- UI feedback ---------- */
+let toastId=null;
+function toast(msg){
+  const old=$("#toast"); if(old)old.remove();
+  const d=document.createElement("div"); d.id="toast"; d.className="toast"; d.textContent=msg;
+  document.body.appendChild(d);
+  clearTimeout(toastId); toastId=setTimeout(()=>d.remove(),2600);
+}
+function fireConfetti(){
+  const cols=["#5B8DEF","#4CAF50","#FFB547","#FF5D73","#9B7DEF"];
+  for(let i=0;i<80;i++){
+    const c=document.createElement("div"); c.className="confetti";
+    c.style.left=Math.random()*100+"vw"; c.style.background=cols[i%cols.length];
+    c.style.transform="rotate("+Math.random()*360+"deg)";
+    c.style.animation="confall "+(2+Math.random()*1.4)+"s "+(Math.random()*.25)+"s cubic-bezier(.3,.6,.4,1) forwards";
+    document.body.appendChild(c); setTimeout(()=>c.remove(),3800);
+  }
+}
+
+/* ---------- Icons (inline SVG) ---------- */
+const I=(p,sz=20)=>`<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const IC={
+  dash:'<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>',
+  habit:'<path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+  task:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  journal:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  study:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  chart:'<path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8"/><rect x="12" y="6" width="3" height="12"/><rect x="17" y="13" width="3" height="5"/>',
+  coach:'<path d="M12 3l1.9 4.6L18 9l-4.1 1.4L12 15l-1.9-4.6L6 9l4.1-1.4z"/><path d="M5 18l.9 2.2L8 21l-2.1.8L5 24"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  flame:'<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  drop:'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
+  moon:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  sun:'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>',
+  heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>',
+  coin:'<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  check:'<polyline points="20 6 9 17 4 12"/>',
+  x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  trash:'<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  play:'<polygon points="5 3 19 12 5 21 5 3"/>',
+  pause:'<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>',
+  reset:'<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  search:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.7" y2="16.7"/>',
+  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  down:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  send:'<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  brain:'<path d="M9.5 2a2.5 2.5 0 0 1 2.5 2.5v15A2.5 2.5 0 0 1 7 19.5 2.5 2.5 0 0 1 4.5 17 2.5 2.5 0 0 1 3 12a2.5 2.5 0 0 1 1-4.9A2.5 2.5 0 0 1 7 4.5 2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 5 0"/>',
+  crown:'<path d="M2 18h20M4 18l-2-9 6 4 4-8 4 8 6-4-2 9"/>'
+};
+
+const NAV=[
+  {id:"dashboard",label:"Panel",icon:IC.dash},
+  {id:"habits",label:"Alışkanlıklar",icon:IC.habit},
+  {id:"tasks",label:"Görevler",icon:IC.task},
+  {id:"journal",label:"Günlük",icon:IC.journal},
+  {id:"study",label:"Çalışma",icon:IC.study},
+  {id:"analytics",label:"Analitik",icon:IC.chart,pro:true},
+  {id:"coach",label:"AI Koç",icon:IC.coach,pro:true},
+  {id:"settings",label:"Ayarlar",icon:IC.settings}
+];
+
+/* ---------- Small render helpers ---------- */
+function ring(pct,val,label,color,sz=88,sw=9){
+  const r=(sz-sw)/2,c=2*Math.PI*r,off=c*(1-Math.min(pct,1));
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+    <div style="position:relative;width:${sz}px;height:${sz}px">
+      <svg width="${sz}" height="${sz}" style="transform:rotate(-90deg)">
+        <circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="var(--ring)" stroke-width="${sw}"/>
+        <circle class="ring-fg" cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c}" data-off="${off}"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+        <span class="disp mono" style="font-size:15px;font-weight:700">${val}</span>
+      </div>
+    </div><span style="font-size:12px;color:var(--sub);font-weight:500">${label}</span></div>`;
+}
+function secH(title,sub,right){return `<div class="sec-h"><div><h3 class="disp">${title}</h3>${sub?`<p>${sub}</p>`:""}</div>${right||""}</div>`;}
+
+/* animate rings after paint */
+function animate(){
+  setTimeout(()=>{document.querySelectorAll(".ring-fg").forEach(c=>{c.style.strokeDashoffset=c.getAttribute("data-off");});},60);
+  document.querySelectorAll(".bar-fill").forEach(b=>{const w=b.getAttribute("data-w");b.style.width="0%";setTimeout(()=>b.style.width=w+"%",80);});
+}
+
+/* ============================================================
+   VIEWS
+   ============================================================ */
+function viewDashboard(){
+  const u=S.user,d=S.data,li=levelInfo();
+  const habitsToday=d.habits.filter(h=>h.history[todayKey()]).length;
+  const tasksDone=d.tasks.filter(t=>t.done).length;
+  const prog=d.habits.length?Math.round(habitsToday/d.habits.length*100):0;
+  const hour=new Date().getHours();
+  const greet=hour<12?"Günaydın":hour<18?"İyi günler":"İyi akşamlar";
+  const quotes=["Küçük adımlar, günlük atıldığında bir hayatın şeklini alır.","Disiplin, en çok istediğini şimdi istediğine tercih etmektir.","Hedeflerine yükselmezsin; sistemlerine düşersin."];
+  const q=quotes[new Date().getDate()%quotes.length];
+  const stats=[
+    {ic:IC.flame,c:"var(--danger)",v:d.streak.count,u:"gün seri",l:"Güncel seri"},
+    {ic:IC.zap,c:"var(--accent)",v:li.lvl,u:d.xp+" XP",l:"Seviye"},
+    {ic:IC.coin,c:"var(--warn)",v:d.coins,u:"jeton",l:"Bakiye"},
+    {ic:IC.heart,c:"var(--success)",v:habitsToday+"/"+d.habits.length,u:"tamamlandı",l:"Bugünkü alışkanlıklar"}
+  ];
+  return `<div class="stagger" style="display:flex;flex-direction:column;gap:20px">
+    <div class="card" style="padding:28px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-60px;top:-60px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,var(--accent-soft),transparent 70%)"></div>
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:20px;position:relative">
+        <div>
+          <p style="font-size:14px;color:var(--sub);font-weight:500">${new Date().toLocaleDateString("tr-TR",{weekday:"long",day:"numeric",month:"long"})}</p>
+          <h1 class="disp" style="font-size:32px;margin-top:6px">${greet}, ${esc(u.name.split(" ")[0])}.</h1>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 16px;border-radius:16px;background:var(--panel);max-width:460px">
+            <span style="color:var(--accent)">${I(IC.zap,16)}</span>
+            <span style="font-size:13.5px;color:var(--sub);font-style:italic">${q}</span>
+          </div>
+        </div>
+        <div style="min-width:190px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-size:13px;color:var(--sub);font-weight:500">Bugünkü ilerleme</span>
+            <span class="disp" style="font-size:22px;font-weight:700;color:var(--accent)">${prog}%</span>
+          </div>
+          <div style="height:10px;border-radius:20px;background:var(--ring);margin-top:10px;overflow:hidden">
+            <div class="bar-fill" data-w="${prog}" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:20px"></div>
+          </div>
+          <p style="font-size:12.5px;color:var(--sub);margin-top:10px">Seviye ${li.lvl} · sonraki seviyeye ${li.need-li.inLvl} XP</p>
+        </div>
+      </div>
+    </div>
+    <div class="grid g4">
+      ${stats.map(s=>`<div class="card lift" style="padding:20px">
+        <div class="row"><div class="stat-ic" style="background:${s.c}1A;color:${s.c}">${I(s.ic)}</div>
+        <div><div class="disp" style="font-size:24px;font-weight:700;line-height:1">${s.v}</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:3px">${s.u}</div></div></div>
+        <div style="font-size:12.5px;color:var(--sub);margin-top:12px;font-weight:500">${s.l}</div></div>`).join("")}
+    </div>
+    <div class="grid g2">
+      <div class="card lift">${secH("Su takibi",d.water.count+" / 8 bardak bugün")}
+        <div style="display:flex;align-items:center;gap:20px">
+          ${ring(d.water.count/8,d.water.count,"bardak","var(--accent)",96)}
+          <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+            <button class="btn btn-primary" data-act="water-add">${I(IC.plus,16)} Bardak ekle</button>
+            <button class="btn btn-ghost" data-act="water-sub">Geri al</button>
+          </div>
+        </div>
+      </div>
+      <div class="card lift">${secH("Bugünkü görevler",tasksDone+"/"+d.tasks.length+" tamamlandı")}
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${d.tasks.slice(0,4).map(t=>`<button class="list-item" data-act="task-toggle" data-id="${t.id}">
+            <span class="check round" style="border-color:${t.done?"var(--success)":"var(--border)"};background:${t.done?"var(--success)":"transparent"};color:#fff">${t.done?I(IC.check,13):""}</span>
+            <span style="font-size:13.5px;font-weight:500;color:${t.done?"var(--sub)":"var(--text)"};text-decoration:${t.done?"line-through":"none"}">${esc(t.text)}</span></button>`).join("")||`<p style="font-size:13px;color:var(--sub)">Henüz görev yok. Görevler sekmesinden ekle.</p>`}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function viewHabits(){
+  const d=S.data;
+  return `<div class="stagger" style="display:flex;flex-direction:column;gap:20px">
+    <div class="card">${secH("Yeni alışkanlık","Her gün işaretle, serini büyüt")}
+      <div class="row" style="gap:10px">
+        <input id="habitInput" class="field" placeholder="Örn. Sabah yürüyüşü" style="flex:1">
+        <button class="btn btn-primary" data-act="habit-add">${I(IC.plus,16)} Ekle</button>
+      </div>
+    </div>
+    <div class="grid g3">
+      ${d.habits.map(h=>{
+        const done=!!h.history[todayKey()];
+        const streak=habitStreak(h);
+        return `<div class="card lift">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div class="row"><span style="width:12px;height:12px;border-radius:50%;background:${h.color}"></span>
+            <span style="font-size:15px;font-weight:600">${esc(h.name)}</span></div>
+            <button data-act="habit-del" data-id="${h.id}" style="color:var(--sub)">${I(IC.trash,16)}</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
+            <span class="chip" style="color:var(--danger)">${I(IC.flame,13)} ${streak} gün</span>
+            <button class="btn ${done?"btn-ghost":"btn-primary"}" data-act="habit-toggle" data-id="${h.id}" style="padding:9px 16px">
+              ${done?I(IC.check,16)+" Tamam":"İşaretle"}</button>
+          </div>
+        </div>`;}).join("")}
+    </div>
+  </div>`;
+}
+function habitStreak(h){
+  let n=0,day=new Date();
+  for(;;){const k=day.toISOString().slice(0,10);if(h.history[k]){n++;day=new Date(day-864e5);}else break;}
+  return n;
+}
+
+function viewTasks(){
+  const d=S.data;
+  return `<div class="stagger" style="display:flex;flex-direction:column;gap:20px">
+    <div class="card">${secH("Yeni görev","Bitirince XP kazan")}
+      <div class="row" style="gap:10px">
+        <input id="taskInput" class="field" placeholder="Yapılacak bir şey yaz…" style="flex:1">
+        <button class="btn btn-primary" data-act="task-add">${I(IC.plus,16)} Ekle</button>
+      </div>
+    </div>
+    <div class="card">${secH("Görevlerim",d.tasks.filter(t=>t.done).length+"/"+d.tasks.length+" tamamlandı")}
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${d.tasks.map(t=>`<div class="list-item">
+          <button class="check round" data-act="task-toggle" data-id="${t.id}" style="border-color:${t.done?"var(--success)":"var(--border)"};background:${t.done?"var(--success)":"transparent"};color:#fff">${t.done?I(IC.check,13):""}</button>
+          <span style="flex:1;font-size:14px;font-weight:500;color:${t.done?"var(--sub)":"var(--text)"};text-decoration:${t.done?"line-through":"none"}">${esc(t.text)}</span>
+          <button data-act="task-del" data-id="${t.id}" style="color:var(--sub)">${I(IC.trash,16)}</button>
+        </div>`).join("")||`<p style="font-size:13px;color:var(--sub)">Liste boş. İlk görevini ekle.</p>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+const MOODS=[{e:"😄",l:"Harika",c:"#4CAF50"},{e:"🙂",l:"İyi",c:"#5B8DEF"},{e:"😌",l:"Sakin",c:"#9B7DEF"},{e:"😔",l:"Yorgun",c:"#FFB547"},{e:"😞",l:"Düşük",c:"#FF5D73"}];
+let draftMood=1;
+function viewJournal(){
+  const d=S.data;
+  return `<div class="stagger" style="display:flex;flex-direction:column;gap:20px">
+    <div class="card">${secH("Yeni günlük girişi","Bugünü kaydet")}
+      <input id="jTitle" class="field" placeholder="Başlık" style="margin-bottom:12px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        ${MOODS.map((m,i)=>`<button data-act="mood" data-i="${i}" class="mood-btn" style="padding:7px 12px;border-radius:11px;border:1px solid ${draftMood===i?m.c:"var(--border)"};background:${draftMood===i?m.c+"1A":"var(--panel)"};color:${draftMood===i?m.c:"var(--sub)"};font-size:13px;font-weight:500;display:flex;gap:6px;align-items:center">${m.e} ${m.l}</button>`).join("")}
+      </div>
+      <textarea id="jText" class="field" rows="4" placeholder="Bugün neler oldu, nasıl hissettin?"></textarea>
+      <input id="jTags" class="field" placeholder="Etiketler (virgülle ayır: odak, spor)" style="margin-top:12px">
+      <div style="display:flex;justify-content:flex-end;margin-top:14px">
+        <button class="btn btn-primary" data-act="journal-add">Kaydet</button>
+      </div>
+    </div>
+    <div class="card">${secH("Zaman çizelgesi",d.journal.length+" giriş")}
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${d.journal.length?d.journal.map(j=>{const m=MOODS[j.mood]||MOODS[1];return `<div style="padding:16px;border-radius:16px;border:1px solid var(--border);background:var(--panel)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div class="row"><span style="font-size:16px">${m.e}</span><span style="font-size:15px;font-weight:600">${esc(j.title)}</span></div>
+            <div class="row" style="gap:10px"><span style="font-size:12px;color:var(--sub)">${new Date(j.ts).toLocaleDateString("tr-TR",{day:"numeric",month:"short"})}</span>
+            <button data-act="journal-del" data-id="${j.id}" style="color:var(--sub)">${I(IC.trash,15)}</button></div>
+          </div>
+          <p style="font-size:13.5px;color:var(--sub);line-height:1.6;white-space:pre-wrap">${esc(j.text)}</p>
+          ${j.tags&&j.tags.length?`<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">${j.tags.map(t=>`<span class="tag">#${esc(t)}</span>`).join("")}</div>`:""}
+        </div>`;}).join(""):`<p style="font-size:13px;color:var(--sub)">Henüz giriş yok. İlk günlüğünü yaz.</p>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function viewStudy(){
+  const p=S.pomo,mm=String(Math.floor(p.sec/60)).padStart(2,"0"),ss=String(p.sec%60).padStart(2,"0");
+  const pct=(1500-p.sec)/1500,sz=220,sw=14,r=(sz-sw)/2,c=2*Math.PI*r;
+  return `<div class="stagger card lift" style="display:flex;flex-direction:column;align-items:center;gap:22px;padding:36px;max-width:420px;margin:0 auto">
+    <h3 class="disp" style="font-size:18px">Pomodoro odak sayacı</h3>
+    <div style="position:relative;width:${sz}px;height:${sz}px">
+      <svg width="${sz}" height="${sz}" style="transform:rotate(-90deg)">
+        <circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="var(--ring)" stroke-width="${sw}"/>
+        <circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="var(--accent)" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c*(1-pct)}" style="transition:stroke-dashoffset 1s linear"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <span id="pomoDisplay" class="disp mono" style="font-size:48px;font-weight:700">${mm}:${ss}</span>
+        <span style="font-size:13px;color:var(--sub);margin-top:4px">${p.run?"Derin odakta":"Hazır olduğunda başla"}</span>
+      </div>
+    </div>
+    <div class="row" style="gap:12px">
+      <button class="btn btn-primary" data-act="pomo-toggle" style="width:56px;height:56px;border-radius:18px;padding:0">${p.run?I(IC.pause,22):I(IC.play,22)}</button>
+      <button class="btn btn-ghost" data-act="pomo-reset" style="width:56px;height:56px;border-radius:18px;padding:0">${I(IC.reset,20)}</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--sub)">Her tamamlanan 25 dk seans +40 XP kazandırır.</p>
+  </div>`;
+}
+
+function proLock(title){
+  return `<div class="lock-wrap fadein">
+    <div style="width:74px;height:74px;border-radius:24px;background:linear-gradient(135deg,var(--warn),var(--danger));display:flex;align-items:center;justify-content:center;color:#fff">${I(IC.lock,32)}</div>
+    <h2 class="disp" style="font-size:26px">${title} — Premium özellik</h2>
+    <p style="max-width:380px;font-size:14px;color:var(--sub);line-height:1.6">Bu bölüm Premium üyelere özel. Yükselttiğinde AI Koç ve gelişmiş analitik anında açılır.</p>
+    <div class="card" style="max-width:320px;width:100%;text-align:left">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="pro-badge">PREMIUM</span><span class="disp" style="font-size:22px;font-weight:700">Ücretsiz*</span></div>
+      <ul style="margin:16px 0;padding-left:18px;font-size:13.5px;color:var(--sub);line-height:1.9">
+        <li>AI Koç sohbeti</li><li>Gelişmiş analitik & skorlar</li><li>Sınırsız günlük & yedekleme</li></ul>
+      <button class="btn btn-primary" data-act="upgrade" style="width:100%">Premium'a yükselt</button>
+      <p style="font-size:11px;color:var(--sub);margin-top:10px">*Bu bir demo — gerçek ödeme alınmaz.</p>
+    </div>
+  </div>`;
+}
+
+function viewAnalytics(){
+  if(!S.user.premium) return proLock("Analitik");
+  const d=S.data;
+  const totalHabits=d.habits.reduce((a,h)=>a+Object.keys(h.history).length,0);
+  const totalTasks=d.tasks.filter(t=>t.done).length;
+  const days=[];
+  for(let i=6;i>=0;i--){const k=new Date(Date.now()-i*864e5).toISOString().slice(0,10);
+    const cnt=d.habits.reduce((a,h)=>a+(h.history[k]?1:0),0);
+    days.push({d:new Date(Date.now()-i*864e5).toLocaleDateString("tr-TR",{weekday:"short"}),v:cnt});}
+  const max=Math.max(1,...days.map(x=>x.v));
+  const scores=[{n:"Tutarlılık",v:Math.min(100,d.streak.count*8),c:"var(--success)"},
+    {n:"Üretkenlik",v:Math.min(100,totalTasks*6+20),c:"var(--accent)"},
+    {n:"Öğrenme",v:Math.min(100,totalHabits*4+15),c:"var(--warn)"},
+    {n:"Denge",v:Math.min(100,60+d.journal.length*5),c:"var(--accent2)"}];
+  const life=Math.round(scores.reduce((a,s)=>a+s.v,0)/scores.length);
+  return `<div class="stagger" style="display:flex;flex-direction:column;gap:20px">
+    <div class="grid g4">${scores.map(s=>`<div class="card lift">
+      <div style="font-size:13px;color:var(--sub);font-weight:500">${s.n}</div>
+      <div class="disp" style="font-size:34px;font-weight:700;color:${s.c};margin-top:6px">${s.v}</div>
+      <div style="height:6px;border-radius:20px;background:var(--ring);margin-top:10px;overflow:hidden"><div class="bar-fill" data-w="${s.v}" style="height:100%;background:${s.c};border-radius:20px"></div></div>
+    </div>`).join("")}</div>
+    <div class="grid g2">
+      <div class="card lift">${secH("Son 7 gün","Günlük tamamlanan alışkanlık")}
+        <div style="display:flex;align-items:flex-end;gap:12px;height:180px;padding-top:10px">
+          ${days.map(x=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end">
+            <div class="bar-fill" data-w="${x.v/max*100}" style="width:100%;max-width:34px;height:0;background:linear-gradient(180deg,var(--accent),var(--accent2));border-radius:8px 8px 4px 4px;min-height:6px"></div>
+            <span style="font-size:11px;color:var(--sub)">${x.d}</span></div>`).join("")}
+        </div>
+      </div>
+      <div class="card lift" style="display:flex;flex-direction:column;align-items:center;justify-content:center">
+        ${secH("Genel yaşam skoru","")}
+        ${ring(life/100,life,"bu ay","var(--accent)",180,16)}
+      </div>
+    </div>
+  </div>`;
+}
+
+function viewCoach(){
+  if(!S.user.premium) return proLock("AI Koç");
+  if(!S.coach.length) S.coach=[{r:"ai",t:"Merhaba "+S.user.name.split(" ")[0]+"! Bugün "+S.data.habits.filter(h=>h.history[todayKey()]).length+" alışkanlığını tamamladın. Güne nasıl bir plan istersin?"}];
+  return `<div class="stagger card" style="display:flex;flex-direction:column;height:70vh;padding:0;overflow:hidden">
+    <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#fff">${I(IC.coach,18)}</div>
+      <div><div class="disp" style="font-size:15px;font-weight:700">AI Koç</div>
+      <div style="font-size:11.5px;color:var(--success)"><span class="pulse" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--success)"></span> Çevrimiçi</div></div>
+    </div>
+    <div id="coachScroll" style="flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px">
+      ${S.coach.map(m=>`<div style="align-self:${m.r==="me"?"flex-end":"flex-start"};max-width:82%;padding:11px 14px;border-radius:16px;font-size:13.5px;line-height:1.5;background:${m.r==="me"?"var(--accent)":"var(--panel)"};color:${m.r==="me"?"#fff":"var(--text)"}">${esc(m.t)}</div>`).join("")}
+    </div>
+    <div style="padding:14px;border-top:1px solid var(--border);display:flex;gap:8px">
+      <input id="coachInput" class="field" placeholder="Koçuna bir şey sor…" style="flex:1">
+      <button class="btn btn-primary" data-act="coach-send" style="width:46px;padding:0">${I(IC.send,17)}</button>
+    </div>
+  </div>`;
+}
+
+function viewSettings(){
+  const u=S.user,d=S.data;
+  return `<div class="stagger" style="display:flex;flex-direction:column;gap:20px;max-width:640px">
+    <div class="card">${secH("Profil","")}
+      <label style="font-size:12.5px;color:var(--sub)">Ad</label>
+      <input id="setName" class="field" value="${esc(u.name)}" style="margin:6px 0 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:13px;color:var(--sub)">E-posta</div><div style="font-weight:600">${esc(u.email)}</div></div>
+        <button class="btn btn-primary" data-act="save-profile">Kaydet</button>
+      </div>
+    </div>
+    <div class="card">${secH("Görünüm","")}
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px;font-weight:500">Karanlık mod</span>
+        <button class="btn btn-ghost" data-act="theme">${d.theme==="dark"?I(IC.sun,16)+" Aydınlık":I(IC.moon,16)+" Karanlık"}</button>
+      </div>
+    </div>
+    <div class="card">${secH("Üyelik","")}
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="row"><span class="pro-badge">${u.premium?"PREMIUM":"ÜCRETSİZ"}</span>
+        <span style="font-size:13.5px;color:var(--sub)">${u.premium?"Tüm özellikler açık":"Bazı özellikler kilitli"}</span></div>
+        ${u.premium?"":`<button class="btn btn-primary" data-act="upgrade">Yükselt</button>`}
+      </div>
+    </div>
+    <div class="card">${secH("Verilerim","Tarayıcında saklanıyor")}
+      <p style="font-size:13px;color:var(--sub);margin-bottom:14px">Depolama: <b>${Store.persistent?"Kalıcı (localStorage)":"Geçici (bu sekme)"}</b>. Verini dosya olarak indirebilirsin.</p>
+      <div class="row" style="gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" data-act="export">${I(IC.down,16)} Verilerimi indir</button>
+        <button class="btn btn-ghost" data-act="wipe" style="color:var(--danger)">${I(IC.trash,16)} Verileri sıfırla</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost" data-act="logout" style="color:var(--danger);align-self:flex-start">${I(IC.logout,16)} Çıkış yap</button>
+  </div>`;
+}
+
+/* ---------- Auth screen ---------- */
+function viewAuth(){
+  const tab=S.authTab;
+  return `<div class="auth-wrap">
+    <div class="auth-hero">
+      <div class="blob" style="width:260px;height:260px;background:#fff;top:-40px;left:-40px"></div>
+      <div class="blob" style="width:200px;height:200px;background:#fff;bottom:40px;right:-30px"></div>
+      <div style="position:relative;color:#fff">
+        <div class="row" style="gap:12px"><div class="logo" style="background:rgba(255,255,255,.2)">L</div><span class="disp" style="font-size:22px;font-weight:700">LifeOS</span></div>
+      </div>
+      <div style="position:relative;color:#fff">
+        <h1 class="disp" style="font-size:40px;line-height:1.1;font-weight:700">Hayatının<br>işletim sistemi.</h1>
+        <p style="font-size:15px;opacity:.9;margin-top:16px;max-width:360px;line-height:1.6">Alışkanlıklar, görevler, günlük, çalışma ve daha fazlası — hepsi sakin, tek bir yerde. Verilerin tarayıcında güvende.</p>
+        <div style="display:flex;gap:8px;margin-top:24px;flex-wrap:wrap">
+          <span class="chip" style="background:rgba(255,255,255,.15);color:#fff">✓ Ücretsiz başla</span>
+          <span class="chip" style="background:rgba(255,255,255,.15);color:#fff">✓ Kurulum yok</span>
+          <span class="chip" style="background:rgba(255,255,255,.15);color:#fff">✓ Verilerin sende</span>
+        </div>
+      </div>
+      <div style="position:relative;color:#fff;font-size:12px;opacity:.75">© 2026 LifeOS — kişisel demo</div>
+    </div>
+    <div class="auth-panel"><div class="auth-box fadein">
+      <h2 class="disp" style="font-size:26px;margin-bottom:6px">${tab==="login"?"Tekrar hoş geldin":"Hesap oluştur"}</h2>
+      <p style="font-size:13.5px;color:var(--sub);margin-bottom:22px">${tab==="login"?"Devam etmek için giriş yap.":"Saniyeler içinde başla."}</p>
+      <div class="auth-tabs">
+        <button class="${tab==="login"?"on":""}" data-act="tab" data-tab="login">Giriş yap</button>
+        <button class="${tab==="signup"?"on":""}" data-act="tab" data-tab="signup">Kayıt ol</button>
+      </div>
+      ${tab==="login"?`<form id="loginForm">
+        <label style="font-size:12.5px;color:var(--sub)">E-posta</label>
+        <input id="liEmail" class="field" type="email" placeholder="ornek@mail.com" style="margin:6px 0 14px" autocomplete="username">
+        <label style="font-size:12.5px;color:var(--sub)">Şifre</label>
+        <input id="liPass" class="field" type="password" placeholder="••••••" style="margin:6px 0 4px" autocomplete="current-password">
+        <div id="authErr" class="err"></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:14px">Giriş yap</button>
+      </form>`:`<form id="signupForm">
+        <label style="font-size:12.5px;color:var(--sub)">Ad</label>
+        <input id="suName" class="field" placeholder="Adın" style="margin:6px 0 14px">
+        <label style="font-size:12.5px;color:var(--sub)">E-posta</label>
+        <input id="suEmail" class="field" type="email" placeholder="ornek@mail.com" style="margin:6px 0 14px" autocomplete="username">
+        <label style="font-size:12.5px;color:var(--sub)">Şifre (en az 6 karakter)</label>
+        <input id="suPass" class="field" type="password" placeholder="••••••" style="margin:6px 0 4px" autocomplete="new-password">
+        <div id="authErr" class="err"></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:14px">Hesap oluştur</button>
+      </form>`}
+      <p style="font-size:11.5px;color:var(--sub);margin-top:18px;line-height:1.5">Bu bir demo uygulamadır. Şifreler yalnızca bu cihazda saklanır ve gerçek güvenlik için tasarlanmamıştır — gerçek şifreni kullanma.</p>
+    </div></div>
+  </div>`;
+}
+
+/* ---------- App shell render ---------- */
+function viewFor(){
+  switch(S.view){
+    case"dashboard":return viewDashboard();
+    case"habits":return viewHabits();
+    case"tasks":return viewTasks();
+    case"journal":return viewJournal();
+    case"study":return viewStudy();
+    case"analytics":return viewAnalytics();
+    case"coach":return viewCoach();
+    case"settings":return viewSettings();
+    default:return viewDashboard();
+  }
+}
+function render(){
+  const app=$("#app");
+  if(!S.user){ app.innerHTML=viewAuth(); return; }
+  const d=S.data,li=levelInfo(),active=NAV.find(n=>n.id===S.view)||NAV[0];
+  app.innerHTML=`<div class="shell">
+    <aside class="side">
+      <div class="brand"><div class="logo">L</div><span class="disp" style="font-size:19px;font-weight:700">LifeOS</span></div>
+      <nav class="nav">
+        ${NAV.map(n=>`<button class="navitem ${S.view===n.id?"on":""}" data-act="nav" data-view="${n.id}" title="${n.label}">
+          ${I(n.icon,19)}<span>${n.label}</span>${n.pro&&!S.user.premium?`<span class="lk">PRO</span>`:""}</button>`).join("")}
+      </nav>
+      <button class="navitem" data-act="logout" style="color:var(--danger);margin-top:8px" title="Çıkış">${I(IC.logout,19)}<span>Çıkış yap</span></button>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="search">${`<span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--sub)">${I(IC.search,17)}</span>`}<input placeholder="Ara…"></div>
+        <div style="flex:1"></div>
+        <div class="chip" style="background:rgba(255,181,71,.15);color:var(--warn);padding:8px 13px;font-weight:700">${I(IC.coin,16)} ${d.coins}</div>
+        <button class="icon-btn" data-act="theme" title="Tema">${d.theme==="dark"?I(IC.sun,18):I(IC.moon,18)}</button>
+        <div class="logo" data-act="nav" data-view="settings" title="${esc(S.user.name)}" style="cursor:pointer;font-size:14px">${esc(S.user.name.charAt(0).toUpperCase())}</div>
+      </header>
+      <main class="content">
+        <div style="margin-bottom:22px"><span class="disp" style="font-size:13px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.06em">${active.label}</span></div>
+        ${viewFor()}
+      </main>
+    </div>
+  </div>`;
+  animate();
+}
+
+/* ---------- Event delegation ---------- */
+document.addEventListener("submit",e=>{
+  const f=e.target;
+  if(f.id==="loginForm"){e.preventDefault();doLogin();}
+  else if(f.id==="signupForm"){e.preventDefault();doSignup();}
+});
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Enter")return;
+  const id=e.target&&e.target.id;
+  if(id==="habitInput"){addHabit();}
+  else if(id==="taskInput"){addTask();}
+  else if(id==="coachInput"){coachSend();}
+});
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]"); if(!b)return;
+  const a=b.getAttribute("data-act"), id=b.getAttribute("data-id");
+  switch(a){
+    case"tab":S.authTab=b.getAttribute("data-tab");render();break;
+    case"nav":S.view=b.getAttribute("data-view");render();break;
+    case"logout":logout();break;
+    case"theme":S.data.theme=S.data.theme==="dark"?"light":"dark";applyTheme();saveData();render();break;
+    case"upgrade":upgrade();break;
+    case"water-add":if(S.data.water.count<20){S.data.water.count++;award(2,1);saveData();render();}break;
+    case"water-sub":if(S.data.water.count>0){S.data.water.count--;saveData();render();}break;
+    case"task-toggle":toggleTask(id);break;
+    case"task-add":addTask();break;
+    case"task-del":S.data.tasks=S.data.tasks.filter(t=>t.id!==id);saveData();render();break;
+    case"habit-toggle":toggleHabit(id);break;
+    case"habit-add":addHabit();break;
+    case"habit-del":S.data.habits=S.data.habits.filter(h=>h.id!==id);saveData();render();break;
+    case"mood":draftMood=+b.getAttribute("data-i");render();break;
+    case"journal-add":addJournal();break;
+    case"journal-del":S.data.journal=S.data.journal.filter(j=>j.id!==id);saveData();render();break;
+    case"pomo-toggle":pomoToggle();break;
+    case"pomo-reset":pomoReset();break;
+    case"coach-send":coachSend();break;
+    case"save-profile":saveProfile();break;
+    case"export":exportData();break;
+    case"wipe":wipeData();break;
+  }
+});
+
+/* ---------- Actions ---------- */
+function toggleTask(id){
+  const t=S.data.tasks.find(x=>x.id===id); if(!t)return;
+  t.done=!t.done; if(t.done)award(15,5); saveData();
+  if(S.data.tasks.length&&S.data.tasks.every(x=>x.done))fireConfetti();
+  render();
+}
+function addTask(){
+  const el=$("#taskInput"); if(!el)return; const v=el.value.trim(); if(!v)return;
+  S.data.tasks.push({id:uid(),text:v,done:false}); saveData(); render();
+}
+function toggleHabit(id){
+  const h=S.data.habits.find(x=>x.id===id); if(!h)return; const k=todayKey();
+  if(h.history[k]){delete h.history[k];}else{h.history[k]=true;award(20,3);}
+  saveData(); render();
+}
+function addHabit(){
+  const el=$("#habitInput"); if(!el)return; const v=el.value.trim(); if(!v)return;
+  const cols=["#5B8DEF","#4CAF50","#FFB547","#FF5D73","#9B7DEF"];
+  S.data.habits.push({id:uid(),name:v,color:cols[S.data.habits.length%cols.length],history:{}}); saveData(); render();
+}
+function addJournal(){
+  const title=$("#jTitle").value.trim()||"Başlıksız", text=$("#jText").value.trim();
+  const tags=$("#jTags").value.split(",").map(s=>s.trim().replace(/^#/,"")).filter(Boolean);
+  if(!text){toast("Birkaç kelime yaz 🙂");return;}
+  S.data.journal.unshift({id:uid(),ts:Date.now(),title,text,mood:draftMood,tags}); award(10,2); saveData(); draftMood=1; render();
+  toast("Günlük kaydedildi ✓");
+}
+function pomoToggle(){
+  S.pomo.run=!S.pomo.run;
+  if(S.pomo.run){
+    S.pomo.id=setInterval(()=>{
+      S.pomo.sec--;
+      const disp=$("#pomoDisplay");
+      if(disp)disp.textContent=String(Math.floor(S.pomo.sec/60)).padStart(2,"0")+":"+String(S.pomo.sec%60).padStart(2,"0");
+      if(S.pomo.sec<=0){clearInterval(S.pomo.id);S.pomo.run=false;S.pomo.sec=25*60;award(40,10);fireConfetti();toast("Seans tamam! +40 XP");if(S.view==="study")render();}
+    },1000);
+  }else{clearInterval(S.pomo.id);}
+  if(S.view==="study")render();
+}
+function pomoReset(){clearInterval(S.pomo.id);S.pomo.run=false;S.pomo.sec=25*60;render();}
+function coachSend(){
+  const el=$("#coachInput"); if(!el)return; const q=el.value.trim(); if(!q)return;
+  S.coach.push({r:"me",t:q});
+  const d=S.data,done=d.habits.filter(h=>h.history[todayKey()]).length;
+  const replies=[
+    "Anladım. Verilerine göre sabah saatlerin en verimli zamanın — 9:00'da 90 dakikalık bir odak bloğu koymanı öneririm.",
+    "Bugün "+done+" alışkanlık ve "+d.tasks.filter(t=>t.done).length+" görev tamamladın. Küçük bir mola hak ettin — 10 dakika yürüyüş?",
+    "Serini ("+d.streak.count+" gün) korumak için bugünkü en kolay alışkanlığını hemen işaretle. İvme her şeydir.",
+    "Harika soru. Önce en zor işi güne başında yap, sonra kolay görevlerle momentum kur."
+  ];
+  S.coach.push({r:"ai",t:replies[Math.floor(Math.random()*replies.length)]});
+  render();
+  const sc=$("#coachScroll"); if(sc)sc.scrollTop=sc.scrollHeight;
+}
+function saveProfile(){
+  const v=$("#setName").value.trim(); if(v.length<2){toast("Ad en az 2 harf olmalı");return;}
+  S.user.name=v; const users=loadUsers(); users[S.user.email].name=v; saveUsers(users); toast("Profil kaydedildi ✓"); render();
+}
+function exportData(){
+  try{
+    const payload={exported:new Date().toISOString(),user:{name:S.user.name,email:S.user.email,premium:S.user.premium},data:S.data};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="lifeos-verilerim.json"; document.body.appendChild(a); a.click();
+    a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); toast("İndirme başladı ✓");
+  }catch(e){toast("İndirme bu ortamda engellenmiş olabilir.");}
+}
+function wipeData(){
+  if(!confirm("Tüm verilerin sıfırlanacak. Emin misin?"))return;
+  S.data=newData(); applyTheme(); saveData(); S.view="dashboard"; render(); toast("Veriler sıfırlandı.");
+}
+
+/* ---------- Boot ---------- */
+(function boot(){
+  const email=Store.get(SESSION_KEY);
+  if(email){const users=loadUsers();if(users[email]){S.user=users[email];S.data=jload(dataKey(email),newData());applyTheme();resetWaterIfNewDay();updateStreak();}}
+  render();
+})();
+</script>
+</body>
+</html>
