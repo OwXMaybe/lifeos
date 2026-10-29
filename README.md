@@ -51,4 +51,4 @@ python -m http.server 8000
 
 ---
 
-**Geliştirici:** Eren Tyto ([@OwXMaybe](https://github.com/OwXMaybe)) · © 2026 Tüm hakları saklıdır.
+**Geliştirici:** Eren Tyto ([@OwXMaybe](https://github.com/OwXMaybe)) · [MIT Lisansı](LICENSE)
