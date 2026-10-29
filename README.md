@@ -8,6 +8,14 @@ LifeOS, günlük hayatını tek bir panelden yönetmen için tasarlanmış, tama
 üretkenlik uygulamasıdır. Kurulum, sunucu veya hesap servisi gerektirmez. Tüm veriler cihazında
 (`localStorage`) kalır ve hiçbir yere gönderilmez.
 
+![LifeOS paneli](docs/screenshots/dashboard.png)
+
+<details><summary>Giriş ekranı</summary>
+
+![Giriş ekranı](docs/screenshots/login.png)
+
+</details>
+
 ## Modüller
 
 | Modül | Ne yapar |
